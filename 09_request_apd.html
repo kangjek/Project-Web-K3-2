@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SafeTrack – Request APD</title>
+<script src="https://cdn.tailwindcss.com/3.4.17"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>* { font-family: 'Plus Jakarta Sans', sans-serif; } .fade-in { animation: fadeIn .3s ease; } @keyframes fadeIn { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} } .loader { border:3px solid #f3f3f3; border-top:3px solid #06b6d4; border-radius:50%; width:20px; height:20px; animation:spin 1s linear infinite; display:inline-block; } @keyframes spin { 0%{transform:rotate(0deg)} 100%{transform:rotate(360deg)} } .apd-card { border:2px solid #e2e8f0; border-radius:12px; padding:10px; cursor:pointer; transition:all .2s; text-align:center; } .apd-card:hover { border-color:#06b6d4; background:#ecfeff; } .apd-card.selected { border-color:#0891b2; background:#cffafe; } .apd-card .icon { font-size:24px; display:block; margin-bottom:4px; } .apd-card .label { font-size:11px; font-weight:600; color:#374151; }</style>
+</head>
+<body class="bg-gray-50 min-h-screen p-4 md:p-6">
+<div class="fade-in max-w-2xl mx-auto">
+  <div class="mb-6">
+    <h1 class="text-2xl font-bold text-gray-800">🦺 Request APD</h1>
+    <p class="text-gray-500 text-sm mt-1">Form permintaan Alat Pelindung Diri</p>
+  </div>
+  <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+    <form id="form" onsubmit="submitForm(event)">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-5">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Nama Pemohon <span class="text-red-400">*</span></label>
+          <input type="text" id="reporter" required placeholder="Nama lengkap Anda" class="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-cyan-400">
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Departemen <span class="text-red-400">*</span></label>
+          <select id="department" required class="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-cyan-400 bg-white">
+            <option value="">Pilih Departemen</option>
+            <option>Lab/QC</option><option>Dyeing</option><option>Winding</option>
+            <option>Warehouse</option><option>HSE</option><option>GA</option>
+            <option>Utility &amp; Maintenance</option><option>Office</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- APD Grid Selector -->
+      <div class="mb-5">
+        <label class="block text-sm font-medium text-gray-700 mb-2">Jenis APD yang Diminta <span class="text-red-400">*</span></label>
+        <input type="hidden" id="apd-type" required>
+        <div class="grid grid-cols-3 md:grid-cols-5 gap-2 mb-2">
+          <div class="apd-card" onclick="selectApd('Helm Safety',this)"><span class="icon">⛑️</span><span class="label">Helm Safety</span></div>
+          <div class="apd-card" onclick="selectApd('Kacamata Safety',this)"><span class="icon">🥽</span><span class="label">Kacamata Safety</span></div>
+          <div class="apd-card" onclick="selectApd('Masker',this)"><span class="icon">😷</span><span class="label">Masker</span></div>
+          <div class="apd-card" onclick="selectApd('Earplug/Earmuff',this)"><span class="icon">🎧</span><span class="label">Earplug/Earmuff</span></div>
+          <div class="apd-card" onclick="selectApd('Sarung Tangan',this)"><span class="icon">🧤</span><span class="label">Sarung Tangan</span></div>
+          <div class="apd-card" onclick="selectApd('Sepatu Safety',this)"><span class="icon">👟</span><span class="label">Sepatu Safety</span></div>
+          <div class="apd-card" onclick="selectApd('Rompi Safety',this)"><span class="icon">🦺</span><span class="label">Rompi Safety</span></div>
+          <div class="apd-card" onclick="selectApd('Full Body Harness',this)"><span class="icon">🪝</span><span class="label">Full Body Harness</span></div>
+          <div class="apd-card" onclick="selectApd('Respirator',this)"><span class="icon">🫁</span><span class="label">Respirator</span></div>
+          <div class="apd-card" onclick="selectApd('Lainnya',this)"><span class="icon">📦</span><span class="label">Lainnya</span></div>
+        </div>
+        <p id="apd-selected-label" class="text-xs text-gray-500 mt-1"></p>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Jumlah <span class="text-red-400">*</span></label>
+          <input type="number" id="quantity" min="1" value="1" required class="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-cyan-400">
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Ukuran</label>
+          <select id="size" class="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-cyan-400 bg-white">
+            <option value="">Pilih Ukuran</option>
+            <option>S</option><option>M</option><option>L</option><option>XL</option><option>XXL</option><option>Free Size</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Alasan <span class="text-red-400">*</span></label>
+          <select id="reason" required class="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-cyan-400 bg-white">
+            <option value="">Pilih Alasan</option>
+            <option>Baru – Belum Punya</option>
+            <option>Penggantian – Rusak</option>
+            <option>Penggantian – Hilang</option>
+            <option>Penggantian – Tidak Layak</option>
+          </select>
+        </div>
+      </div>
+      <div class="mb-6">
+        <label class="block text-sm font-medium text-gray-700 mb-1">Keterangan Tambahan</label>
+        <textarea id="notes" rows="3" placeholder="Tambahkan keterangan jika diperlukan" class="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-cyan-400 resize-none"></textarea>
+      </div>
+      <button type="submit" id="submit-btn" class="w-full py-3 bg-gradient-to-r from-cyan-500 to-blue-500 text-white rounded-xl font-semibold hover:from-cyan-600 hover:to-blue-600 transition-all flex items-center justify-center gap-2">
+        🦺 Kirim Permintaan APD
+      </button>
+    </form>
+  </div>
+  <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 mt-5">
+    <h3 class="font-semibold text-gray-800 mb-3 text-sm">📋 Request APD Terbaru</h3>
+    <div id="recent-list"><p class="text-xs text-gray-400 text-center py-4">Memuat data...</p></div>
+  </div>
+</div>
+<div id="toast-container" class="fixed bottom-4 right-4 z-50 space-y-2"></div>
+<script>
+const API='https://script.google.com/macros/s/AKfycbzTG9Hs62r2eDumzLAFvgLDwdUHBLQV-5tC12XajU0u_dY2Y8PPq-US2GXiycsEzav7/exec';
+const KEY='safetrack_reports';let reports=[];
+let selectedApdCard=null;
+
+function selectApd(type,el){
+  if(selectedApdCard) selectedApdCard.classList.remove('selected');
+  el.classList.add('selected'); selectedApdCard=el;
+  document.getElementById('apd-type').value=type;
+  document.getElementById('apd-selected-label').textContent='✅ Dipilih: '+type;
+}
+function load(){try{reports=JSON.parse(localStorage.getItem(KEY)||'[]');}catch(e){reports=[];}}
+function save(){localStorage.setItem(KEY,JSON.stringify(reports));}
+function genId(){return `local-${Date.now()}-${Math.random().toString(36).slice(2,8)}`;}
+function fmtDT(v){if(!v)return'-';const d=new Date(v);return isNaN(d.getTime())?String(v):d.toLocaleString('id-ID',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});}
+function statusCls(s){if(s==='Selesai')return'bg-green-100 text-green-800';if(s==='Diproses')return'bg-blue-100 text-blue-800';if(s==='Menunggu Konfirmasi')return'bg-yellow-100 text-yellow-800';return'bg-red-100 text-red-800';}
+function getDT(){const now=new Date();const pad=n=>String(n).padStart(2,'0');const off=-now.getTimezoneOffset();const sign=off>=0?'+':'-';const ah=pad(Math.floor(Math.abs(off)/60)),am=pad(Math.abs(off)%60);return `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}${sign}${ah}:${am}`;}
+function toast(msg,type='success'){const c=document.getElementById('toast-container');const el=document.createElement('div');el.className=`${type==='success'?'bg-emerald-500':'bg-red-500'} text-white px-5 py-3 rounded-xl shadow-lg text-sm fade-in`;el.textContent=msg;c.appendChild(el);setTimeout(()=>el.remove(),3500);}
+async function sync(rs){if(!rs.length)return;try{await fetch(API,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({action:'syncAll',reports:rs.map(r=>({backendId:r.__backendId,date:r.report_date||'',type:r.type||'',category:r.category||'',reporter:r.reporter_name||'',department:r.department||'',location:'-',status:r.status||'',priority:r.priority||'Normal',details:r.details||'',description:r.description||'',boxType:'',itemsStatus:'',adminNotes:'',completedDate:''}))})});}catch(e){}}
+function renderRecent(){const f=reports.filter(r=>r.type==='Request APD').slice(0,5);const el=document.getElementById('recent-list');if(!f.length){el.innerHTML='<p class="text-xs text-gray-400 text-center py-4">Belum ada request APD</p>';return;}el.innerHTML='<div class="space-y-2">'+f.map(r=>`<div class="flex items-center justify-between bg-gray-50 rounded-lg p-3"><div><p class="text-sm font-medium text-gray-800">${r.category||'-'}</p><p class="text-xs text-gray-500">${r.details||''} · ${fmtDT(r.report_date)}</p></div><span class="text-xs font-semibold px-2 py-1 rounded-full ${statusCls(r.status)}">${r.status}</span></div>`).join('')+'</div>';}
+async function submitForm(e){
+  e.preventDefault();
+  const apdType=document.getElementById('apd-type').value;
+  if(!apdType){toast('Pilih jenis APD terlebih dahulu','error');return;}
+  const btn=document.getElementById('submit-btn');
+  if(reports.length>=999){toast('Batas 999 laporan tercapai','error');return;}
+  btn.disabled=true;btn.innerHTML='<div class="loader"></div> Mengirim...';
+  const r={__backendId:genId(),type:'Request APD',category:apdType,location:'-',department:document.getElementById('department').value,reporter_name:document.getElementById('reporter').value.trim(),report_date:getDT(),status:'Menunggu Konfirmasi',details:`Jumlah: ${document.getElementById('quantity').value}, Ukuran: ${document.getElementById('size').value||'-'}, Alasan: ${document.getElementById('reason').value}`,description:document.getElementById('notes').value.trim()||'-',priority:'Normal',admin_notes:'',completed_date:''};
+  load();reports=[r,...reports];save();await sync(reports);renderRecent();
+  btn.disabled=false;btn.innerHTML='🦺 Kirim Permintaan APD';
+  toast('Permintaan APD berhasil dikirim!');document.getElementById('form').reset();
+  if(selectedApdCard){selectedApdCard.classList.remove('selected');selectedApdCard=null;}
+  document.getElementById('apd-type').value='';document.getElementById('apd-selected-label').textContent='';
+}
+load();renderRecent();
+</script>
+</body>
+</html>

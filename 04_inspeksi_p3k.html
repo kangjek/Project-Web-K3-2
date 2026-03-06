@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SafeTrack – Inspeksi P3K</title>
+<script src="https://cdn.tailwindcss.com/3.4.17"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  * { font-family: 'Plus Jakarta Sans', sans-serif; }
+  .fade-in { animation: fadeIn .3s ease; }
+  @keyframes fadeIn { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+  .loader { border:3px solid #f3f3f3; border-top:3px solid #ec4899; border-radius:50%; width:20px; height:20px; animation:spin 1s linear infinite; display:inline-block; }
+  @keyframes spin { 0%{transform:rotate(0deg)} 100%{transform:rotate(360deg)} }
+  select { outline:none; }
+  .item-row:nth-child(even) { background: #f8fafc; }
+</style>
+</head>
+<body class="bg-gray-50 min-h-screen p-4 md:p-6">
+<div class="fade-in max-w-2xl mx-auto">
+  <div class="mb-6">
+    <h1 class="text-2xl font-bold text-gray-800">🩹 Inspeksi Kotak P3K</h1>
+    <p class="text-gray-500 text-sm mt-1">Sesuai Permenaker No. 15 Tahun 2008</p>
+  </div>
+
+  <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+    <form id="form" onsubmit="submitForm(event)">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Nama Pelapor <span class="text-red-400">*</span></label>
+          <input type="text" id="reporter" required placeholder="Nama lengkap Anda"
+            class="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-pink-400 focus:border-pink-400">
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Departemen <span class="text-red-400">*</span></label>
+          <select id="department" required class="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-pink-400 bg-white">
+            <option value="">Pilih Departemen</option>
+            <option>Lab/QC</option><option>Dyeing</option><option>Winding</option>
+            <option>Warehouse</option><option>HSE</option><option>GA</option>
+            <option>Utility &amp; Maintenance</option><option>Office</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Lokasi Kotak P3K <span class="text-red-400">*</span></label>
+          <input type="text" id="location" required placeholder="Contoh: Ruang Produksi A"
+            class="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-pink-400">
+        </div>
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Tipe Kotak P3K <span class="text-red-400">*</span></label>
+          <select id="box-type" required onchange="updateChecklist(this.value)"
+            class="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-pink-400 bg-white">
+            <option value="">Pilih Tipe Kotak</option>
+            <option value="A">Tipe A (1–25 tenaga kerja)</option>
+            <option value="B">Tipe B (26–50 tenaga kerja)</option>
+            <option value="C">Tipe C (51–100 tenaga kerja)</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Dynamic Checklist -->
+      <div id="checklist-wrap" class="hidden mb-4">
+        <label class="block text-sm font-medium text-gray-700 mb-2">Checklist Isi Kotak P3K</label>
+        <div class="bg-gray-50 rounded-xl overflow-hidden border border-gray-200">
+          <table class="w-full text-sm">
+            <thead class="bg-pink-50">
+              <tr>
+                <th class="text-left px-3 py-2 font-semibold text-gray-700">Isi Kotak</th>
+                <th class="text-center px-3 py-2 font-semibold text-gray-700 w-16">Jml</th>
+                <th class="text-center px-3 py-2 font-semibold text-gray-700 w-36">Kondisi</th>
+              </tr>
+            </thead>
+            <tbody id="checklist-body"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="mb-6">
+        <label class="block text-sm font-medium text-gray-700 mb-1">Catatan Tambahan</label>
+        <textarea id="notes" rows="3" placeholder="Tambahkan catatan jika diperlukan"
+          class="w-full px-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-pink-400 resize-none"></textarea>
+      </div>
+
+      <button type="submit" id="submit-btn"
+        class="w-full py-3 bg-gradient-to-r from-pink-500 to-rose-500 text-white rounded-xl font-semibold hover:from-pink-600 hover:to-rose-600 transition-all flex items-center justify-center gap-2">
+        🩹 Kirim Laporan Inspeksi P3K
+      </button>
+    </form>
+  </div>
+
+  <div class="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 mt-5">
+    <h3 class="font-semibold text-gray-800 mb-3 text-sm">📋 Laporan P3K Terbaru</h3>
+    <div id="recent-list"><p class="text-xs text-gray-400 text-center py-4">Memuat data...</p></div>
+  </div>
+</div>
+<div id="toast-container" class="fixed bottom-4 right-4 z-50 space-y-2"></div>
+<script>
+const API='https://script.google.com/macros/s/AKfycbzTG9Hs62r2eDumzLAFvgLDwdUHBLQV-5tC12XajU0u_dY2Y8PPq-US2GXiycsEzav7/exec';
+const KEY='safetrack_reports';
+let reports=[];
+
+const p3kItems=[
+  {name:'Kasa steril terbungkus',A:20,B:40,C:40},{name:'Perban (lebar 5 cm)',A:2,B:4,C:6},
+  {name:'Perban (lebar 10 cm)',A:2,B:4,C:6},{name:'Plester (lebar 1,25 cm)',A:2,B:4,C:6},
+  {name:'Plester cepat',A:10,B:15,C:20},{name:'Kapas (25 gram)',A:1,B:2,C:3},
+  {name:'Kain segitiga/mittela',A:2,B:4,C:6},{name:'Gunting',A:1,B:1,C:1},
+  {name:'Peniti',A:12,B:12,C:12},{name:'Sarung tangan sekali pakai',A:2,B:3,C:4},
+  {name:'Masker',A:2,B:4,C:6},{name:'Pinset',A:1,B:1,C:1},
+  {name:'Lampu senter',A:1,B:1,C:1},{name:'Gelas cuci mata',A:1,B:1,C:1},
+  {name:'Kantong plastik bersih',A:1,B:2,C:3},{name:'Aquades/larutan Saline (100ml)',A:1,B:1,C:1},
+  {name:'Povidon Iodin (60ml)',A:1,B:1,C:1},{name:'Alkohol 70%',A:1,B:1,C:1},
+  {name:'Buku panduan P3K',A:1,B:1,C:1},{name:'Buku catatan',A:1,B:1,C:1},{name:'Daftar isi kotak',A:1,B:1,C:1}
+];
+
+function load(){try{reports=JSON.parse(localStorage.getItem(KEY)||'[]');}catch(e){reports=[];}}
+function save(){localStorage.setItem(KEY,JSON.stringify(reports));}
+function genId(){return `local-${Date.now()}-${Math.random().toString(36).slice(2,8)}`;}
+function fmtDT(v){if(!v)return'-';const d=new Date(v);return isNaN(d.getTime())?String(v):d.toLocaleString('id-ID',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});}
+function statusCls(s){if(s==='Selesai')return'bg-green-100 text-green-800';if(s==='Diproses')return'bg-blue-100 text-blue-800';if(s==='Menunggu Konfirmasi')return'bg-yellow-100 text-yellow-800';return'bg-red-100 text-red-800';}
+function getDT(){const now=new Date();const pad=n=>String(n).padStart(2,'0');const off=-now.getTimezoneOffset();const sign=off>=0?'+':'-';const ah=pad(Math.floor(Math.abs(off)/60)),am=pad(Math.abs(off)%60);return `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}${sign}${ah}:${am}`;}
+function toast(msg,type='success'){const c=document.getElementById('toast-container');const el=document.createElement('div');el.className=`${type==='success'?'bg-emerald-500':'bg-red-500'} text-white px-5 py-3 rounded-xl shadow-lg text-sm fade-in`;el.textContent=msg;c.appendChild(el);setTimeout(()=>el.remove(),3500);}
+async function sync(rs){if(!rs.length)return;try{await fetch(API,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({action:'syncAll',reports:rs.map(r=>({backendId:r.__backendId,date:r.report_date||'',type:r.type||'',category:r.category||'',reporter:r.reporter_name||'',department:r.department||'',location:r.location||'',status:r.status||'',priority:r.priority||'Normal',details:r.details||'',description:r.description||'',boxType:r.box_type||'',itemsStatus:r.items_status||'',adminNotes:r.admin_notes||'',completedDate:r.completed_date||''}))})});}catch(e){}}
+
+function updateChecklist(boxType){
+  const wrap=document.getElementById('checklist-wrap');
+  const tbody=document.getElementById('checklist-body');
+  if(!boxType){wrap.classList.add('hidden');return;}
+  wrap.classList.remove('hidden');
+  tbody.innerHTML=p3kItems.map((item,i)=>`
+    <tr class="item-row border-b border-gray-100">
+      <td class="px-3 py-2 text-sm text-gray-700">${item.name}</td>
+      <td class="px-3 py-2 text-center font-semibold text-gray-800">${item[boxType]}</td>
+      <td class="px-3 py-2 text-center">
+        <select name="item_${i}" class="text-xs border border-gray-200 rounded-lg px-2 py-1 bg-white">
+          <option value="Baik">✅ Baik</option>
+          <option value="Perlu Isi Ulang">⚠️ Perlu Isi Ulang</option>
+        </select>
+      </td>
+    </tr>
+  `).join('');
+}
+
+function renderRecent(){
+  const f=reports.filter(r=>r.type==='Inspeksi P3K').slice(0,5);
+  const el=document.getElementById('recent-list');
+  if(!f.length){el.innerHTML='<p class="text-xs text-gray-400 text-center py-4">Belum ada laporan P3K</p>';return;}
+  el.innerHTML='<div class="space-y-2">'+f.map(r=>`<div class="flex items-center justify-between bg-gray-50 rounded-lg p-3"><div><p class="text-sm font-medium text-gray-800">${r.category||'-'} – ${r.location||''}</p><p class="text-xs text-gray-500">${r.department} · ${fmtDT(r.report_date)}</p></div><span class="text-xs font-semibold px-2 py-1 rounded-full ${statusCls(r.status)}">${r.status}</span></div>`).join('')+'</div>';
+}
+
+async function submitForm(e){
+  e.preventDefault();
+  const btn=document.getElementById('submit-btn');
+  if(reports.length>=999){toast('Batas 999 laporan tercapai','error');return;}
+  btn.disabled=true;btn.innerHTML='<div class="loader"></div> Mengirim...';
+  
+  const boxType=document.getElementById('box-type').value;
+  let itemsStatus=[]; let needsRefill=false;
+  if(boxType){
+    p3kItems.forEach((item,i)=>{
+      const sel=document.querySelector(`select[name="item_${i}"]`);
+      if(sel&&sel.value==='Perlu Isi Ulang'){needsRefill=true;itemsStatus.push(`${item.name}: Perlu Isi Ulang`);}
+    });
+  }
+  const r={
+    __backendId:genId(),type:'Inspeksi P3K',category:`Kotak Tipe ${boxType}`,
+    location:document.getElementById('location').value.trim(),
+    department:document.getElementById('department').value,
+    reporter_name:document.getElementById('reporter').value.trim(),
+    report_date:getDT(),status:needsRefill?'Perlu Isi Ulang':'Selesai',
+    box_type:boxType,items_status:itemsStatus.join('; ')||'Semua item lengkap',
+    details:`Tipe ${boxType}`,description:document.getElementById('notes').value.trim()||'-',
+    priority:needsRefill?'Normal':'Rendah',admin_notes:'',completed_date:''
+  };
+  load();reports=[r,...reports];save();await sync(reports);renderRecent();
+  btn.disabled=false;btn.innerHTML='🩹 Kirim Laporan Inspeksi P3K';
+  toast('Laporan inspeksi P3K berhasil dikirim!');
+  document.getElementById('form').reset();
+  document.getElementById('checklist-wrap').classList.add('hidden');
+}
+load();renderRecent();
+</script>
+</body>
+</html>
