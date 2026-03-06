@@ -3,281 +3,230 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>SafeTrack – Dashboard</title>
+<title>SafeMe – Dashboard</title>
 <script src="https://cdn.tailwindcss.com/3.4.17"></script>
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
+  :root {
+    --brand: #6366f1;
+    --brand2: #8b5cf6;
+    --accent: #f59e0b;
+  }
   * { font-family: 'Plus Jakarta Sans', sans-serif; }
-  .status-badge { padding: 3px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; }
-  .status-waiting { background:#fef3c7; color:#92400e; }
-  .status-processing { background:#dbeafe; color:#1e40af; }
-  .status-completed { background:#d1fae5; color:#065f46; }
-  .status-needs-attention { background:#fee2e2; color:#991b1b; }
-  .fade-in { animation: fadeIn .3s ease; }
-  @keyframes fadeIn { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
-  .loader { border:3px solid #f3f3f3; border-top:3px solid #10b981; border-radius:50%; width:24px; height:24px; animation:spin 1s linear infinite; }
-  @keyframes spin { 0%{transform:rotate(0deg)} 100%{transform:rotate(360deg)} }
-  .card { background:#fff; border-radius:14px; padding:20px; box-shadow:0 1px 4px rgba(0,0,0,.07); border:1px solid #f1f5f9; }
+  body { background: #f1f5f9; }
+  .card { background:#fff; border-radius:16px; padding:20px; box-shadow:0 1px 3px rgba(0,0,0,.06); border:1px solid #e8ecf1; }
+  .status-badge { padding:3px 10px; border-radius:20px; font-size:11px; font-weight:600; }
+  .sw { background:#fef3c7; color:#92400e; }
+  .sp { background:#dbeafe; color:#1e40af; }
+  .sc { background:#d1fae5; color:#065f46; }
+  .sa { background:#fee2e2; color:#991b1b; }
+  .fade-in { animation: fi .35s ease; }
+  @keyframes fi { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
+  .loader { border:3px solid #e2e8f0; border-top:3px solid var(--brand); border-radius:50%; width:28px; height:28px; animation:spin 1s linear infinite; }
+  @keyframes spin { to{transform:rotate(360deg)} }
 </style>
 </head>
-<body class="bg-gray-50 min-h-screen p-4 md:p-6">
+<body class="min-h-screen p-4 md:p-6">
 
-<!-- Header -->
-<div class="flex items-center gap-3 mb-6">
-  <div class="w-10 h-10 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-xl flex items-center justify-center text-white font-bold text-lg">S</div>
-  <div>
-    <h1 class="text-xl font-bold text-gray-800">Dashboard SafeTrack</h1>
-    <p class="text-xs text-gray-500">PT. Chin Hsin Thread Indonesia – Sistem K3</p>
+<div class="max-w-4xl mx-auto">
+  <!-- Header -->
+  <div class="flex items-center gap-3 mb-6">
+    <div class="w-11 h-11 rounded-2xl flex items-center justify-center text-white font-black text-lg" style="background:linear-gradient(135deg,#6366f1,#8b5cf6)">S</div>
+    <div>
+      <h1 class="text-xl font-bold text-gray-900">Dashboard SafeMe</h1>
+      <p class="text-xs text-gray-500">Sistem Manajemen K3 – PT. Chin Hsin Thread Indonesia</p>
+    </div>
+    <button onclick="refreshData()" class="ml-auto px-3 py-2 rounded-xl text-sm font-medium flex items-center gap-1.5 transition-all" style="background:#ede9fe;color:#6366f1" onmouseover="this.style.background='#ddd6fe'" onmouseout="this.style.background='#ede9fe'">
+      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+      Refresh
+    </button>
   </div>
-  <button onclick="refreshData()" class="ml-auto px-3 py-2 bg-emerald-50 text-emerald-700 rounded-lg text-sm font-medium hover:bg-emerald-100 flex items-center gap-1">
-    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
-    Refresh
-  </button>
+
+  <div id="loading" class="flex justify-center py-20"><div class="loader"></div></div>
+
+  <div id="content" class="hidden fade-in space-y-5">
+    <!-- Stat Cards -->
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div class="card text-center">
+        <p class="text-xs text-gray-500 mb-1">Menunggu</p>
+        <p id="s-waiting" class="text-3xl font-black text-amber-500">0</p>
+      </div>
+      <div class="card text-center">
+        <p class="text-xs text-gray-500 mb-1">Diproses</p>
+        <p id="s-proc" class="text-3xl font-black text-blue-500">0</p>
+      </div>
+      <div class="card text-center">
+        <p class="text-xs text-gray-500 mb-1">Selesai</p>
+        <p id="s-done" class="text-3xl font-black text-emerald-500">0</p>
+      </div>
+      <div class="card text-center">
+        <p class="text-xs text-gray-500 mb-1">Perlu Perhatian</p>
+        <p id="s-att" class="text-3xl font-black text-red-500">0</p>
+      </div>
+    </div>
+
+    <!-- Summary Row -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+      <div class="rounded-2xl p-5 text-white" style="background:linear-gradient(135deg,#6366f1,#8b5cf6)">
+        <p class="text-indigo-200 text-xs mb-1">Total Laporan</p>
+        <p id="s-total" class="text-4xl font-black">0</p>
+      </div>
+      <div class="rounded-2xl p-5 text-white" style="background:linear-gradient(135deg,#f59e0b,#ef4444)">
+        <p class="text-amber-100 text-xs mb-1">Tingkat Penyelesaian</p>
+        <p id="s-rate" class="text-4xl font-black">0%</p>
+        <p id="s-rate-sub" class="text-xs text-amber-100 mt-1">0 dari 0</p>
+      </div>
+      <div class="rounded-2xl p-5 text-white" style="background:linear-gradient(135deg,#10b981,#0891b2)">
+        <p class="text-emerald-100 text-xs mb-1">Prioritas Tinggi</p>
+        <p id="s-prio" class="text-4xl font-black">0</p>
+        <p class="text-xs text-emerald-100 mt-1">perlu penanganan segera</p>
+      </div>
+    </div>
+
+    <!-- Attention Alert -->
+    <div id="att-block" class="hidden bg-red-50 border border-red-200 rounded-2xl p-4">
+      <h3 class="font-bold text-red-800 text-sm flex items-center gap-2 mb-3">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+        Item yang Membutuhkan Perhatian
+      </h3>
+      <div id="att-list" class="space-y-2"></div>
+    </div>
+
+    <!-- Charts -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div class="card">
+        <h3 class="font-bold text-gray-800 text-sm mb-3">📊 Laporan per Tipe</h3>
+        <div id="chart-type" class="space-y-2"></div>
+      </div>
+      <div class="card">
+        <h3 class="font-bold text-gray-800 text-sm mb-3">🏢 Laporan per Departemen</h3>
+        <div id="chart-dept" class="space-y-2"></div>
+      </div>
+    </div>
+
+    <!-- Recent -->
+    <div class="card">
+      <h3 class="font-bold text-gray-800 text-sm mb-3">📋 Laporan Terbaru</h3>
+      <div id="recent"></div>
+    </div>
+  </div>
 </div>
 
-<!-- Loading -->
-<div id="loading" class="flex justify-center py-16"><div class="loader"></div></div>
-
-<!-- Content -->
-<div id="content" class="hidden fade-in">
-
-  <!-- Stat Cards -->
-  <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
-    <div class="card">
-      <p class="text-xs text-gray-500 mb-1">Menunggu Konfirmasi</p>
-      <p id="stat-waiting" class="text-3xl font-bold text-amber-500">0</p>
-    </div>
-    <div class="card">
-      <p class="text-xs text-gray-500 mb-1">Sedang Diproses</p>
-      <p id="stat-processing" class="text-3xl font-bold text-blue-500">0</p>
-    </div>
-    <div class="card">
-      <p class="text-xs text-gray-500 mb-1">Selesai</p>
-      <p id="stat-completed" class="text-3xl font-bold text-emerald-500">0</p>
-    </div>
-    <div class="card">
-      <p class="text-xs text-gray-500 mb-1">Perlu Perhatian</p>
-      <p id="stat-attention" class="text-3xl font-bold text-red-500">0</p>
-    </div>
-  </div>
-
-  <!-- Summary Row -->
-  <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mb-6">
-    <div class="rounded-xl p-5 bg-gradient-to-br from-emerald-500 to-teal-600 text-white">
-      <p class="text-emerald-100 text-xs mb-1">Total Laporan</p>
-      <p id="stat-total" class="text-3xl font-bold">0</p>
-    </div>
-    <div class="rounded-xl p-5 bg-gradient-to-br from-purple-500 to-pink-600 text-white">
-      <p class="text-purple-100 text-xs mb-1">Tingkat Penyelesaian</p>
-      <p id="stat-rate" class="text-3xl font-bold">0%</p>
-      <p id="stat-rate-sub" class="text-xs text-purple-100 mt-1">0 dari 0</p>
-    </div>
-    <div class="rounded-xl p-5 bg-gradient-to-br from-red-500 to-orange-600 text-white">
-      <p class="text-red-100 text-xs mb-1">Prioritas Tinggi</p>
-      <p id="stat-priority" class="text-3xl font-bold">0</p>
-      <p class="text-xs text-red-100 mt-1">memerlukan penanganan</p>
-    </div>
-  </div>
-
-  <!-- Alert: Needs Attention -->
-  <div id="attention-block" class="hidden bg-red-50 border border-red-200 rounded-xl p-4 mb-6">
-    <h3 class="font-semibold text-red-800 mb-3 flex items-center gap-2 text-sm">
-      <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
-      Item yang Membutuhkan Perhatian
-    </h3>
-    <div id="attention-list" class="space-y-2"></div>
-  </div>
-
-  <!-- Charts Row -->
-  <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-    <div class="card">
-      <h3 class="font-semibold text-gray-800 mb-3 text-sm">📊 Laporan per Tipe</h3>
-      <div id="chart-type" class="space-y-2"></div>
-    </div>
-    <div class="card">
-      <h3 class="font-semibold text-gray-800 mb-3 text-sm">🏢 Laporan per Departemen</h3>
-      <div id="chart-dept" class="space-y-2"></div>
-    </div>
-  </div>
-
-  <!-- Recent Reports -->
-  <div class="card">
-    <h3 class="font-semibold text-gray-800 mb-3 text-sm">📋 Laporan Terbaru</h3>
-    <div id="recent-list"></div>
-  </div>
-</div>
-
-<div id="toast-container" class="fixed bottom-4 right-4 z-50 space-y-2"></div>
+<div id="toast-ct" class="fixed bottom-4 right-4 z-50 space-y-2"></div>
 
 <script>
-const GOOGLE_SHEETS_API = 'https://script.google.com/macros/s/AKfycbzTG9Hs62r2eDumzLAFvgLDwdUHBLQV-5tC12XajU0u_dY2Y8PPq-US2GXiycsEzav7/exec';
-const LOCAL_REPORTS_KEY = 'safetrack_reports';
-let allReports = [];
+const API = 'YOUR_SAFEME_APPS_SCRIPT_URL';
+const KEY = 'safeme_reports';
+let all = [];
 
-function loadLocal() {
-  try { allReports = JSON.parse(localStorage.getItem(LOCAL_REPORTS_KEY)||'[]'); } catch(e) { allReports=[]; }
-}
-function formatDateTime(v) {
-  if(!v) return '-';
-  const d = new Date(v);
-  if(isNaN(d.getTime())) return String(v);
-  return d.toLocaleString('id-ID',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
-}
-function getStatusClass(s) {
-  if(s==='Menunggu Konfirmasi') return 'status-waiting';
-  if(s==='Diproses') return 'status-processing';
-  if(s==='Selesai') return 'status-completed';
-  return 'status-needs-attention';
-}
-function getTypeIcon(t) {
-  const m={'Inspeksi APAR':'🧯','Inspeksi Hydrant':'🚒','Inspeksi P3K':'🩹','Inspeksi Peralatan':'🔧','Permit Kerja':'📋','JSA':'⚠️','Kondisi Tidak Aman':'🚨','Request APD':'🦺','Saran Lainnya':'💬'};
-  return m[t]||'📄';
-}
-function showToast(msg,type='success'){
-  const c=document.getElementById('toast-container');
-  const el=document.createElement('div');
-  el.className=`${type==='success'?'bg-emerald-500':'bg-red-500'} text-white px-5 py-3 rounded-lg shadow-lg flex items-center gap-2 fade-in`;
-  el.innerHTML=`<span>${msg}</span>`;
-  c.appendChild(el);
-  setTimeout(()=>el.remove(),3500);
-}
+function loadLocal(){ try{all=JSON.parse(localStorage.getItem(KEY)||'[]');}catch(e){all=[];} }
+function saveLocal(){ localStorage.setItem(KEY,JSON.stringify(all)); }
+function fmtDT(v){ if(!v)return'-'; const d=new Date(v); return isNaN(d)?String(v):d.toLocaleString('id-ID',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}); }
+function sc(s){ if(s==='Menunggu Konfirmasi')return'sw'; if(s==='Diproses')return'sp'; if(s==='Selesai')return'sc'; return'sa'; }
+function icon(t){ return {'Inspeksi APAR':'🧯','Inspeksi Hydrant':'🚒','Inspeksi P3K':'🩹','Inspeksi Peralatan':'🔧','Permit Kerja':'📋','JSA':'⚠️','Kondisi Tidak Aman':'🚨','Request APD':'🦺','Saran Lainnya':'💬'}[t]||'📄'; }
+function toast(msg){ const c=document.getElementById('toast-ct'); const el=document.createElement('div'); el.className='bg-indigo-600 text-white px-5 py-3 rounded-xl shadow-lg text-sm fade-in'; el.textContent=msg; c.appendChild(el); setTimeout(()=>el.remove(),3000); }
 
-function fetchWithJsonp() {
-  return new Promise((res,rej)=>{
-    const cb=`stJ_${Date.now()}`;
-    const s=document.createElement('script');
-    const clean=()=>{s.parentNode?.removeChild(s);delete window[cb];};
-    window[cb]=p=>{clean();p?.status==='success'&&Array.isArray(p.reports)?res(p.reports.filter(r=>r.__backendId)):rej();};
-    s.onerror=()=>{clean();rej();};
-    s.src=`${GOOGLE_SHEETS_API}?action=getReports&callback=${cb}&_=${Date.now()}`;
-    document.body.appendChild(s);
-  });
-}
-
-async function fetchCloud() {
-  try {
-    const r=await fetch(`${GOOGLE_SHEETS_API}?action=getReports&_=${Date.now()}`,{mode:'cors',cache:'no-store'});
-    if(!r.ok) throw new Error();
+async function fetchCloud(){
+  try{
+    const r=await fetch(`${API}?action=getReports&_=${Date.now()}`,{mode:'cors',cache:'no-store'});
+    if(!r.ok)throw new Error();
     const p=await r.json();
-    if(p.status!=='success'||!Array.isArray(p.reports)) throw new Error();
+    if(p.status!=='success'||!Array.isArray(p.reports))throw new Error();
     return p.reports.filter(r=>r.__backendId);
-  } catch(e) {
-    try { return await fetchWithJsonp(); } catch(e2) { return []; }
+  }catch(e){
+    return new Promise(res=>{
+      const cb=`smJ_${Date.now()}`;
+      const s=document.createElement('script');
+      const clean=()=>{s.parentNode?.removeChild(s);delete window[cb];};
+      window[cb]=p=>{clean();p?.status==='success'&&Array.isArray(p.reports)?res(p.reports.filter(r=>r.__backendId)):res([]);};
+      s.onerror=()=>{clean();res([]);};
+      s.src=`${API}?action=getReports&callback=${cb}&_=${Date.now()}`;
+      document.body.appendChild(s);
+    });
   }
 }
 
-function merge(remote,local){
-  const m=new Map();
-  remote.forEach(r=>m.set(r.__backendId,r));
-  local.forEach(r=>{if(r.__backendId&&!m.has(r.__backendId))m.set(r.__backendId,r);});
-  return Array.from(m.values()).sort((a,b)=>new Date(b.report_date||0)-new Date(a.report_date||0));
-}
-
-function renderBar(container, stats, total, colorClass) {
-  if (!stats || Object.keys(stats).length === 0) {
-    container.innerHTML = '<p class="text-gray-400 text-xs">Belum ada data</p>';
-    return;
-  }
-  container.innerHTML = Object.entries(stats).sort((a,b)=>b[1]-a[1]).map(([label,count])=>`
+function renderBar(id,stats,total,color){
+  const el=document.getElementById(id);
+  if(!Object.keys(stats).length){el.innerHTML='<p class="text-gray-400 text-xs">Belum ada data</p>';return;}
+  el.innerHTML=Object.entries(stats).sort((a,b)=>b[1]-a[1]).map(([l,c])=>`
     <div>
       <div class="flex justify-between mb-1">
-        <span class="text-xs text-gray-600 truncate max-w-[160px]">${label}</span>
-        <span class="text-xs font-bold ${colorClass.replace('bg-','text-')}">${count}</span>
+        <span class="text-xs text-gray-600 truncate max-w-[160px]">${l}</span>
+        <span class="text-xs font-bold" style="color:${color}">${c}</span>
       </div>
       <div class="w-full bg-gray-100 rounded-full h-1.5">
-        <div class="${colorClass} h-1.5 rounded-full" style="width:${total>0?Math.round(count/total*100):0}%"></div>
+        <div class="h-1.5 rounded-full transition-all" style="width:${total>0?Math.round(c/total*100):0}%;background:${color}"></div>
       </div>
-    </div>
-  `).join('');
+    </div>`).join('');
 }
 
-function renderDashboard() {
-  const reports = allReports;
-  const waiting = reports.filter(r=>r.status==='Menunggu Konfirmasi').length;
-  const processing = reports.filter(r=>r.status==='Diproses').length;
-  const completed = reports.filter(r=>r.status==='Selesai').length;
-  const attention = reports.filter(r=>['Perlu Perbaikan','Perlu Isi Ulang','Tidak Layak Pakai'].includes(r.status)).length;
-  const highPrio = reports.filter(r=>r.priority==='Tinggi').length;
-  const total = reports.length;
-  const rate = total > 0 ? Math.round(completed/total*100) : 0;
+function render(){
+  const r=all;
+  const waiting=r.filter(x=>x.status==='Menunggu Konfirmasi').length;
+  const proc=r.filter(x=>x.status==='Diproses').length;
+  const done=r.filter(x=>x.status==='Selesai').length;
+  const att=r.filter(x=>['Perlu Perbaikan','Perlu Isi Ulang','Tidak Layak Pakai'].includes(x.status)).length;
+  const prio=r.filter(x=>x.priority==='Tinggi').length;
+  const total=r.length;
+  const rate=total>0?Math.round(done/total*100):0;
 
-  document.getElementById('stat-waiting').textContent = waiting;
-  document.getElementById('stat-processing').textContent = processing;
-  document.getElementById('stat-completed').textContent = completed;
-  document.getElementById('stat-attention').textContent = attention;
-  document.getElementById('stat-total').textContent = total;
-  document.getElementById('stat-rate').textContent = rate+'%';
-  document.getElementById('stat-rate-sub').textContent = `${completed} dari ${total}`;
-  document.getElementById('stat-priority').textContent = highPrio;
+  document.getElementById('s-waiting').textContent=waiting;
+  document.getElementById('s-proc').textContent=proc;
+  document.getElementById('s-done').textContent=done;
+  document.getElementById('s-att').textContent=att;
+  document.getElementById('s-total').textContent=total;
+  document.getElementById('s-rate').textContent=rate+'%';
+  document.getElementById('s-rate-sub').textContent=`${done} dari ${total}`;
+  document.getElementById('s-prio').textContent=prio;
 
-  // Attention block
-  const attentionItems = reports.filter(r=>['Perlu Perbaikan','Perlu Isi Ulang','Tidak Layak Pakai'].includes(r.status)).slice(0,5);
-  if (attentionItems.length > 0) {
-    document.getElementById('attention-block').classList.remove('hidden');
-    document.getElementById('attention-list').innerHTML = attentionItems.map(r=>`
-      <div class="bg-white rounded-lg p-3 flex items-center justify-between">
-        <div>
-          <p class="font-medium text-gray-800 text-sm">${r.category||r.type}</p>
-          <p class="text-xs text-gray-500">${r.location||r.department} – ${formatDateTime(r.report_date)}</p>
-        </div>
-        <span class="status-badge status-needs-attention">${r.status}</span>
-      </div>
-    `).join('');
+  const attItems=r.filter(x=>['Perlu Perbaikan','Perlu Isi Ulang','Tidak Layak Pakai'].includes(x.status)).slice(0,5);
+  if(attItems.length){
+    document.getElementById('att-block').classList.remove('hidden');
+    document.getElementById('att-list').innerHTML=attItems.map(x=>`
+      <div class="bg-white rounded-xl p-3 flex items-center justify-between">
+        <div><p class="font-semibold text-gray-800 text-sm">${x.category||x.type}</p><p class="text-xs text-gray-500">${x.location||x.department} – ${fmtDT(x.report_date)}</p></div>
+        <span class="status-badge sa">${x.status}</span>
+      </div>`).join('');
   }
 
-  // Charts
-  const typeStats={}, deptStats={};
-  reports.forEach(r=>{
-    typeStats[r.type]=(typeStats[r.type]||0)+1;
-    deptStats[r.department]=(deptStats[r.department]||0)+1;
-  });
-  renderBar(document.getElementById('chart-type'), typeStats, total, 'bg-emerald-500');
-  renderBar(document.getElementById('chart-dept'), deptStats, total, 'bg-blue-500');
+  const typeStats={},deptStats={};
+  r.forEach(x=>{ typeStats[x.type]=(typeStats[x.type]||0)+1; deptStats[x.department]=(deptStats[x.department]||0)+1; });
+  renderBar('chart-type',typeStats,total,'#6366f1');
+  renderBar('chart-dept',deptStats,total,'#0891b2');
 
-  // Recent
-  const recentEl = document.getElementById('recent-list');
-  if (reports.length === 0) {
-    recentEl.innerHTML = '<p class="text-center text-gray-400 py-6 text-sm">Belum ada laporan</p>';
-  } else {
-    recentEl.innerHTML = '<div class="divide-y divide-gray-100">'+reports.slice(0,10).map(r=>`
-      <div class="py-3 flex items-center justify-between">
-        <div class="flex items-center gap-3">
-          <span class="text-xl">${getTypeIcon(r.type)}</span>
-          <div>
-            <p class="text-sm font-medium text-gray-800">${r.type} – ${r.category||''}</p>
-            <p class="text-xs text-gray-500">${r.location||r.department} · ${formatDateTime(r.report_date)}</p>
-          </div>
-        </div>
-        <span class="status-badge ${getStatusClass(r.status)}">${r.status}</span>
+  const rec=document.getElementById('recent');
+  rec.innerHTML=r.length?'<div class="divide-y divide-gray-100">'+r.slice(0,10).map(x=>`
+    <div class="py-3 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <span class="text-xl">${icon(x.type)}</span>
+        <div><p class="text-sm font-semibold text-gray-800">${x.type} – ${x.category||''}</p><p class="text-xs text-gray-500">${x.location||x.department} · ${fmtDT(x.report_date)}</p></div>
       </div>
-    `).join('')+'</div>';
-  }
+      <span class="status-badge ${sc(x.status)}">${x.status}</span>
+    </div>`).join('')+'</div>':'<p class="text-center text-gray-400 py-8 text-sm">Belum ada laporan</p>';
 }
 
-async function refreshData() {
+async function refreshData(){
   document.getElementById('content').classList.add('hidden');
   document.getElementById('loading').classList.remove('hidden');
   loadLocal();
-  const cloud = await fetchCloud();
-  allReports = merge(cloud, allReports);
-  localStorage.setItem(LOCAL_REPORTS_KEY, JSON.stringify(allReports));
-  renderDashboard();
+  const cloud=await fetchCloud();
+  const m=new Map(); cloud.forEach(r=>m.set(r.__backendId,r)); all.forEach(r=>{if(r.__backendId&&!m.has(r.__backendId))m.set(r.__backendId,r);});
+  all=Array.from(m.values()).sort((a,b)=>new Date(b.report_date||0)-new Date(a.report_date||0));
+  saveLocal(); render();
   document.getElementById('loading').classList.add('hidden');
   document.getElementById('content').classList.remove('hidden');
-  showToast('Data berhasil diperbarui!');
+  toast('Data berhasil diperbarui!');
 }
 
-// Init
 (async()=>{
-  loadLocal();
-  renderDashboard();
+  loadLocal(); render();
   document.getElementById('loading').classList.add('hidden');
   document.getElementById('content').classList.remove('hidden');
-  // background sync
-  const cloud = await fetchCloud();
-  allReports = merge(cloud, allReports);
-  localStorage.setItem(LOCAL_REPORTS_KEY, JSON.stringify(allReports));
-  renderDashboard();
+  const cloud=await fetchCloud();
+  const m=new Map(); cloud.forEach(r=>m.set(r.__backendId,r)); all.forEach(r=>{if(r.__backendId&&!m.has(r.__backendId))m.set(r.__backendId,r);});
+  all=Array.from(m.values()).sort((a,b)=>new Date(b.report_date||0)-new Date(a.report_date||0));
+  saveLocal(); render();
 })();
 </script>
 </body>
