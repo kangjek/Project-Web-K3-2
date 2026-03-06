@@ -103,10 +103,12 @@ File `08_kondisi_tidak_aman.html` mendukung upload foto dengan dua cara:
 
 ## Tentang Data
 
-- Data disimpan di `localStorage` browser (`safeme_reports`)
-- Data otomatis sync ke Google Sheets setiap ada laporan baru
-- Semua halaman berbagi data lewat localStorage yang sama (dalam domain yang sama)
-- Admin dapat melihat semua laporan dari halaman Admin Panel
+- Setiap halaman akan **mengambil data terbaru dari server (Google Apps Script/Sheets)** saat dibuka.
+- Setiap laporan baru akan dikirim ke server yang sama (`syncAll`) sehingga bisa diakses oleh device lain.
+- `localStorage` (`safeme_reports`) tetap dipakai sebagai cache lokal agar UI tetap cepat saat koneksi lambat.
+- Admin dapat melihat semua laporan dari halaman Admin Panel.
+
+> Agar semua device benar-benar berbagi data yang sama, pastikan Web App Apps Script di-deploy dengan akses **Anyone** (atau minimal semua pengguna yang harus mengakses).
 
 ---
 

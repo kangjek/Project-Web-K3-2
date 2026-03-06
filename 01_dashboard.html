@@ -132,18 +132,28 @@ async function fetchCloud(){
     if(!r.ok)throw new Error();
     const p=await r.json();
     if(p.status!=='success'||!Array.isArray(p.reports))throw new Error();
-    return p.reports.filter(r=>r.__backendId);
+    return p.reports.filter(r=>r.__backendId).map(mapBackend);
   }catch(e){
     return new Promise(res=>{
       const cb=`smJ_${Date.now()}`;
       const s=document.createElement('script');
       const clean=()=>{s.parentNode?.removeChild(s);delete window[cb];};
-      window[cb]=p=>{clean();p?.status==='success'&&Array.isArray(p.reports)?res(p.reports.filter(r=>r.__backendId)):res([]);};
-      s.onerror=()=>{clean();res([]);};
+      const timer=setTimeout(()=>{clean();res([]);},9000);
+      window[cb]=p=>{clearTimeout(timer);clean();p?.status==='success'&&Array.isArray(p.reports)?res(p.reports.filter(r=>r.__backendId).map(mapBackend)):res([]);};
+      s.onerror=()=>{clearTimeout(timer);clean();res([]);};
       s.src=`${API}?action=getReports&callback=${cb}&_=${Date.now()}`;
       document.body.appendChild(s);
     });
   }
+}
+
+function mapBackend(r){return{__backendId:r.__backendId||'',report_date:r.report_date||'',type:r.type||'',category:r.category||'',reporter_name:r.reporter_name||'',department:r.department||'',location:r.location||'',status:r.status||'',priority:r.priority||'Normal',details:r.details||'',description:r.description||'',box_type:r.box_type||'',items_status:r.items_status||'',admin_notes:r.admin_notes||'',completed_date:r.completed_date||'',photo_url:r.photo_url||''};}
+
+function mergeWithCloud(cloud){
+  const m=new Map();
+  cloud.forEach(r=>m.set(r.__backendId,r));
+  all.forEach(r=>{if(r.__backendId&&!m.has(r.__backendId))m.set(r.__backendId,r);});
+  all=Array.from(m.values()).sort((a,b)=>new Date(b.report_date||0)-new Date(a.report_date||0));
 }
 
 function renderBar(id,stats,total,color){
@@ -211,8 +221,7 @@ async function refreshData(){
   document.getElementById('loading').classList.remove('hidden');
   loadLocal();
   const cloud=await fetchCloud();
-  const m=new Map(); cloud.forEach(r=>m.set(r.__backendId,r)); all.forEach(r=>{if(r.__backendId&&!m.has(r.__backendId))m.set(r.__backendId,r);});
-  all=Array.from(m.values()).sort((a,b)=>new Date(b.report_date||0)-new Date(a.report_date||0));
+  mergeWithCloud(cloud);
   saveLocal(); render();
   document.getElementById('loading').classList.add('hidden');
   document.getElementById('content').classList.remove('hidden');
@@ -224,8 +233,7 @@ async function refreshData(){
   document.getElementById('loading').classList.add('hidden');
   document.getElementById('content').classList.remove('hidden');
   const cloud=await fetchCloud();
-  const m=new Map(); cloud.forEach(r=>m.set(r.__backendId,r)); all.forEach(r=>{if(r.__backendId&&!m.has(r.__backendId))m.set(r.__backendId,r);});
-  all=Array.from(m.values()).sort((a,b)=>new Date(b.report_date||0)-new Date(a.report_date||0));
+  mergeWithCloud(cloud);
   saveLocal(); render();
 })();
 </script>

@@ -241,6 +241,39 @@ async function sync(rs) {
   } catch(e) {}
 }
 
+
+async function fetchServerReports(){
+  try{
+    const r=await fetch(`${API}?action=getReports&_=${Date.now()}`,{mode:'cors',cache:'no-store'});
+    const d=await r.json();
+    return (d&&d.status==='success'&&Array.isArray(d.reports))?d.reports:[];
+  }catch(e){
+    return await new Promise(res=>{
+      const cb=`smcb_${Date.now()}_${Math.random().toString(36).slice(2,7)}`;
+      const s=document.createElement('script');
+      const done=v=>{try{delete window[cb];}catch(_){} if(s.parentNode)s.parentNode.removeChild(s);res(v||[]);} ;
+      const timer=setTimeout(()=>done([]),9000);
+      window[cb]=(d)=>{clearTimeout(timer);done((d&&d.status==='success'&&Array.isArray(d.reports))?d.reports:[]);} ;
+      s.onerror=()=>{clearTimeout(timer);done([]);} ;
+      s.src=`${API}?action=getReports&callback=${cb}&_=${Date.now()}`;
+      document.body.appendChild(s);
+    });
+  }
+}
+function mapBackend(r){return{__backendId:r.__backendId||'',report_date:r.report_date||'',type:r.type||'',category:r.category||'',reporter_name:r.reporter_name||'',department:r.department||'',location:r.location||'',status:r.status||'',priority:r.priority||'Normal',details:r.details||'',description:r.description||'',box_type:r.box_type||'',items_status:r.items_status||'',admin_notes:r.admin_notes||'',completed_date:r.completed_date||'',photo_url:r.photo_url||''};}
+async function init(){
+  load();
+  const remote=(await fetchServerReports()).map(mapBackend);
+  if(remote.length){
+    const m={};
+    reports.forEach(r=>{if(r.__backendId)m[r.__backendId]=r;});
+    remote.forEach(r=>{if(r.__backendId)m[r.__backendId]=r;});
+    reports=Object.values(m).sort((a,b)=>new Date(b.report_date||0)-new Date(a.report_date||0));
+    save();
+  }
+  renderRecent();
+}
+
 function renderRecent() {
   const f  = reports.filter(r => r.type === 'Kondisi Tidak Aman').slice(0, 5);
   const el = document.getElementById('recent-list');
@@ -311,8 +344,7 @@ async function submitForm(e) {
   removePhoto();
 }
 
-load();
-renderRecent();
+init();
 </script>
 </body>
 </html>
