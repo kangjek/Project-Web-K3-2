@@ -52,6 +52,38 @@ function sCls(s){if(s==='Selesai')return'bg-green-100 text-green-800';if(s==='Di
 function getDT(){const n=new Date();const p=x=>String(x).padStart(2,'0');const o=-n.getTimezoneOffset();const sg=o>=0?'+':'-';const ah=p(Math.floor(Math.abs(o)/60)),am=p(Math.abs(o)%60);return`${n.getFullYear()}-${p(n.getMonth()+1)}-${p(n.getDate())}T${p(n.getHours())}:${p(n.getMinutes())}:${p(n.getSeconds())}${sg}${ah}:${am}`;}
 function toast(msg,t='success'){const c=document.getElementById('toast-ct');const el=document.createElement('div');el.className=`${t==='success'?'bg-emerald-500':'bg-red-500'} text-white px-5 py-3 rounded-xl shadow-lg text-sm fade-in`;el.textContent=msg;c.appendChild(el);setTimeout(()=>el.remove(),3500);}
 async function sync(rs){if(!rs.length)return;try{await fetch(API,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({action:'syncAll',reports:rs.map(r=>({backendId:r.__backendId,date:r.report_date||'',type:r.type||'',category:r.category||'',reporter:r.reporter_name||'',department:r.department||'',location:r.location||'',status:r.status||'',priority:r.priority||'Normal',details:r.details||'',description:r.description||'',boxType:'',itemsStatus:'',adminNotes:'',completedDate:'',photoUrl:''}))})});}catch(e){}}
+
+async function fetchServerReports(){
+  try{
+    const r=await fetch(`${API}?action=getReports&_=${Date.now()}`,{mode:'cors',cache:'no-store'});
+    const d=await r.json();
+    return (d&&d.status==='success'&&Array.isArray(d.reports))?d.reports:[];
+  }catch(e){
+    return await new Promise(res=>{
+      const cb=`smcb_${Date.now()}_${Math.random().toString(36).slice(2,7)}`;
+      const s=document.createElement('script');
+      const done=v=>{try{delete window[cb];}catch(_){} if(s.parentNode)s.parentNode.removeChild(s);res(v||[]);} ;
+      const timer=setTimeout(()=>done([]),9000);
+      window[cb]=(d)=>{clearTimeout(timer);done((d&&d.status==='success'&&Array.isArray(d.reports))?d.reports:[]);} ;
+      s.onerror=()=>{clearTimeout(timer);done([]);} ;
+      s.src=`${API}?action=getReports&callback=${cb}&_=${Date.now()}`;
+      document.body.appendChild(s);
+    });
+  }
+}
+function mapBackend(r){return{__backendId:r.__backendId||'',report_date:r.report_date||'',type:r.type||'',category:r.category||'',reporter_name:r.reporter_name||'',department:r.department||'',location:r.location||'',status:r.status||'',priority:r.priority||'Normal',details:r.details||'',description:r.description||'',box_type:r.box_type||'',items_status:r.items_status||'',admin_notes:r.admin_notes||'',completed_date:r.completed_date||'',photo_url:r.photo_url||''};}
+async function init(){
+  load();
+  const remote=(await fetchServerReports()).map(mapBackend);
+  if(remote.length){
+    const m={};
+    reports.forEach(r=>{if(r.__backendId)m[r.__backendId]=r;});
+    remote.forEach(r=>{if(r.__backendId)m[r.__backendId]=r;});
+    reports=Object.values(m).sort((a,b)=>new Date(b.report_date||0)-new Date(a.report_date||0));
+    save();
+  }
+  renderRecent();
+}
 function renderRecent(){const f=reports.filter(r=>r.type==='Permit Kerja').slice(0,5);const el=document.getElementById('recent-list');if(!f.length){el.innerHTML='<p class="text-xs text-gray-400 text-center py-4">Belum ada permit kerja</p>';return;}el.innerHTML='<div class="space-y-2">'+f.map(r=>`<div class="flex items-center justify-between bg-slate-50 rounded-xl p-3"><div><p class="text-sm font-semibold text-gray-800">${r.category||'-'}</p><p class="text-xs text-gray-500">${r.details||''} · ${fmtDT(r.report_date)}</p></div><span class="text-xs font-semibold px-2 py-1 rounded-full ${sCls(r.status)}">${r.status}</span></div>`).join('')+'</div>';}
 async function submitForm(e){
   e.preventDefault();const btn=document.getElementById('submit-btn');
@@ -62,7 +94,7 @@ async function submitForm(e){
   btn.disabled=false;btn.innerHTML='📋 Ajukan Permit Kerja';
   toast('Permit kerja berhasil diajukan!');document.getElementById('form').reset();
 }
-load();renderRecent();
+init();
 </script>
 </body>
 </html>
