@@ -96,7 +96,8 @@ File `08_kondisi_tidak_aman.html` mendukung upload foto dengan dua cara:
 4. URL publik Drive disimpan di sheet kolom `photo_url`
 5. Admin dapat melihat foto langsung dari panel admin (klik "📷 Lihat Foto")
 
-**Batas ukuran foto:** 5 MB per foto
+**Batas ukuran foto user:** 8 MB per foto (sebelum proses)
+**Kompresi otomatis:** foto dikompresi di browser (maks sisi 1920 px, target sekitar 1.2 MB) sebelum dikirim ke Apps Script/Drive
 **Format yang didukung:** JPG, PNG, WEBP
 
 ---
