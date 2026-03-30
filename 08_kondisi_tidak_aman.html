@@ -109,7 +109,7 @@
           Hapus foto
         </button>
 
-        <p class="text-xs text-gray-400 mt-2">Format: JPG, PNG, WEBP · Maks. 2 MB · Foto akan disimpan di Google Drive</p>
+        <p class="text-xs text-gray-400 mt-2">Format: JPG, PNG, WEBP · Maks. 8 MB (otomatis dikompresi ~1.2 MB) · Foto akan disimpan di Google Drive</p>
       </div>
 
       <button type="submit" id="submit-btn" class="w-full py-3 text-white rounded-xl font-semibold transition-all flex items-center justify-center gap-2" style="background:linear-gradient(135deg,#f59e0b,#ef4444)">
@@ -131,6 +131,9 @@ const KEY = 'safeme_reports';
 let reports = [];
 let photoData = null;   // base64 string
 let photoMeta = null;   // { name, size }
+const MAX_UPLOAD_MB = 8;          // batas file mentah dari user
+const COMPRESS_TARGET_MB = 1.2;   // target ukuran setelah kompresi
+const MAX_DIMENSION = 1920;       // batas sisi panjang gambar
 
 // ── Severity ──────────────────────────────────────────────────
 function setSev(val) {
@@ -158,28 +161,81 @@ function handleFile(input) {
   input.value = ''; // reset so same file can be re-selected
 }
 
-function processFile(file) {
+function formatMB(bytes){ return (bytes / (1024 * 1024)).toFixed(2) + ' MB'; }
+
+async function processFile(file) {
   if (!file.type.startsWith('image/')) { toast('File harus berupa gambar', 'error'); return; }
-  if (file.size > 2 * 1024 * 1024) { toast('Ukuran foto maks. 2 MB', 'error'); return; }
+  if (file.size > MAX_UPLOAD_MB * 1024 * 1024) {
+    toast(`Ukuran foto maks. ${MAX_UPLOAD_MB} MB`, 'error');
+    return;
+  }
 
-  const reader = new FileReader();
-  reader.onload = (e) => {
-    photoData = e.target.result;  // base64 data URL
-    photoMeta = { name: file.name, size: (file.size / 1024).toFixed(1) + ' KB' };
+  const compressingToast = toast('Mengompresi foto agar upload lebih hemat...', 'success');
+  let processed;
+  try {
+    processed = await compressImage(file, COMPRESS_TARGET_MB * 1024 * 1024);
+  } catch (err) {
+    if (compressingToast) compressingToast.remove();
+    toast('Gagal memproses foto. Coba pilih foto lain.', 'error');
+    return;
+  }
+  if (compressingToast) compressingToast.remove();
+  if (!processed || !processed.dataUrl) {
+    toast('Gagal memproses foto. Coba pilih foto lain.', 'error');
+    return;
+  }
 
-    // Update preview
-    const preview = document.getElementById('photo-preview');
-    preview.src = photoData;
-    preview.classList.add('show');
-
-    document.getElementById('photo-placeholder').style.display = 'none';
-    document.getElementById('photo-info').classList.remove('hidden');
-    document.getElementById('photo-name').textContent = '✅ ' + photoMeta.name;
-    document.getElementById('photo-size').textContent = photoMeta.size;
-    document.getElementById('drop-zone').classList.add('has-photo');
-    document.getElementById('remove-photo').classList.remove('hidden');
+  photoData = processed.dataUrl;  // base64 data URL (sudah dikompresi)
+  photoMeta = {
+    name: file.name,
+    size: `${formatMB(processed.bytes)} (asal ${formatMB(file.size)})`
   };
-  reader.readAsDataURL(file);
+
+  // Update preview
+  const preview = document.getElementById('photo-preview');
+  preview.src = photoData;
+  preview.classList.add('show');
+
+  document.getElementById('photo-placeholder').style.display = 'none';
+  document.getElementById('photo-info').classList.remove('hidden');
+  document.getElementById('photo-name').textContent = '✅ ' + photoMeta.name;
+  document.getElementById('photo-size').textContent = photoMeta.size;
+  document.getElementById('drop-zone').classList.add('has-photo');
+  document.getElementById('remove-photo').classList.remove('hidden');
+  toast(`Foto siap upload (${photoMeta.size})`, 'success');
+}
+
+async function compressImage(file, targetBytes) {
+  const imageBitmap = await createImageBitmap(file);
+  let width = imageBitmap.width;
+  let height = imageBitmap.height;
+  if (Math.max(width, height) > MAX_DIMENSION) {
+    const ratio = MAX_DIMENSION / Math.max(width, height);
+    width = Math.round(width * ratio);
+    height = Math.round(height * ratio);
+  }
+
+  const canvas = document.createElement('canvas');
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext('2d');
+  ctx.drawImage(imageBitmap, 0, 0, width, height);
+
+  let quality = 0.86;
+  let blob = await new Promise(res => canvas.toBlob(res, 'image/jpeg', quality));
+  while (blob && blob.size > targetBytes && quality > 0.45) {
+    quality -= 0.07;
+    blob = await new Promise(res => canvas.toBlob(res, 'image/jpeg', quality));
+  }
+
+  if (!blob) throw new Error('no_blob');
+  const dataUrl = await new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = e => resolve(e.target.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
+  return { dataUrl, bytes: blob.size };
 }
 
 function removePhoto() {
@@ -201,7 +257,7 @@ function genId() { return `sm-${Date.now()}-${Math.random().toString(36).slice(2
 function fmtDT(v){ if(!v)return'-'; const d=new Date(v); return isNaN(d)?String(v):d.toLocaleString('id-ID',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}); }
 function sCls(s) { if(s==='Selesai')return'bg-green-100 text-green-800'; if(s==='Diproses')return'bg-blue-100 text-blue-800'; if(s==='Menunggu Konfirmasi')return'bg-yellow-100 text-yellow-800'; return'bg-red-100 text-red-800'; }
 function getDT() { const n=new Date();const p=x=>String(x).padStart(2,'0');const o=-n.getTimezoneOffset();const sg=o>=0?'+':'-';const ah=p(Math.floor(Math.abs(o)/60)),am=p(Math.abs(o)%60);return`${n.getFullYear()}-${p(n.getMonth()+1)}-${p(n.getDate())}T${p(n.getHours())}:${p(n.getMinutes())}:${p(n.getSeconds())}${sg}${ah}:${am}`; }
-function toast(msg, t='success') { const c=document.getElementById('toast-ct'); const el=document.createElement('div'); el.className=`${t==='success'?'bg-emerald-500':'bg-red-500'} text-white px-5 py-3 rounded-xl shadow-lg text-sm fade-in`; el.textContent=msg; c.appendChild(el); setTimeout(()=>el.remove(),3500); }
+function toast(msg, t='success') { const c=document.getElementById('toast-ct'); const el=document.createElement('div'); el.className=`${t==='success'?'bg-emerald-500':'bg-red-500'} text-white px-5 py-3 rounded-xl shadow-lg text-sm fade-in`; el.textContent=msg; c.appendChild(el); setTimeout(()=>el.remove(),3500); return el; }
 
 /**
  * Sync to Apps Script.
