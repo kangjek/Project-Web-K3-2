@@ -128,6 +128,22 @@ function sc(s){ if(s==='Menunggu Konfirmasi')return'sw'; if(s==='Diproses')retur
 function icon(t){ return {'Inspeksi APAR':'🧯','Inspeksi Hydrant':'🚒','Inspeksi P3K':'🩹','Inspeksi Peralatan':'🔧','Permit Kerja':'📋','JSA':'⚠️','Kondisi Tidak Aman':'🚨','Request APD':'🦺','Saran Lainnya':'💬'}[t]||'📄'; }
 function toast(msg){ const c=document.getElementById('toast-ct'); const el=document.createElement('div'); el.className='bg-indigo-600 text-white px-5 py-3 rounded-xl shadow-lg text-sm fade-in'; el.textContent=msg; c.appendChild(el); setTimeout(()=>el.remove(),3000); }
 function esc(v){ return String(v||'').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c])); }
+function getDriveFileId(url){
+  if(!url)return'';
+  const byPath=url.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
+  if(byPath?.[1])return byPath[1];
+  const byOpen=url.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+  if(byOpen?.[1])return byOpen[1];
+  return'';
+}
+function getPhotoPreviewUrl(url){
+  if(!url)return'';
+  const clean=String(url).trim();
+  if(clean.startsWith('data:image/'))return clean;
+  const id=getDriveFileId(clean);
+  if(id)return`https://drive.google.com/thumbnail?id=${id}&sz=w1600`;
+  return clean;
+}
 
 function closeModal(){
   const m=document.getElementById('modal');
@@ -138,16 +154,18 @@ function closeModal(){
 function viewDetail(idx){
   const x=all[idx];
   if(!x)return;
-  const photoUrlEsc=esc(x.photo_url||'');
+  const photoLinkEsc=esc(x.photo_url||'');
+  const photoPreviewEsc=esc(getPhotoPreviewUrl(x.photo_url||''));
   const isUnsafeCondition=x.type==='Kondisi Tidak Aman';
   const photoHtml=x.photo_url?`
     <div>
       <p class="text-xs text-gray-400 mb-1">Foto</p>
       ${isUnsafeCondition ? `
-      <a href="${photoUrlEsc}" target="_blank" class="block group">
-        <img src="${photoUrlEsc}" alt="Preview foto kondisi tidak aman" loading="lazy" class="w-full max-h-64 object-contain rounded-xl border border-gray-200 bg-slate-50 group-hover:opacity-90 transition-opacity">
+      <a href="${photoLinkEsc}" target="_blank" class="block group">
+        <img src="${photoPreviewEsc}" alt="Preview foto kondisi tidak aman" loading="lazy" onerror="this.classList.add('hidden');this.nextElementSibling.classList.remove('hidden');" class="w-full max-h-64 object-contain rounded-xl border border-gray-200 bg-slate-50 group-hover:opacity-90 transition-opacity">
+        <p class="hidden text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 mt-2">Preview gagal dimuat. Gunakan tombol "Lihat Foto".</p>
       </a>` : ''}
-      <a href="${photoUrlEsc}" target="_blank" class="inline-flex items-center gap-1 text-xs text-indigo-600 underline font-medium mt-2">📷 Lihat Foto</a>
+      <a href="${photoLinkEsc}" target="_blank" class="inline-flex items-center gap-1 text-xs text-indigo-600 underline font-medium mt-2">📷 Lihat Foto</a>
     </div>`:'';
   const m=document.getElementById('modal');
   m.innerHTML=`
