@@ -138,7 +138,17 @@ function closeModal(){
 function viewDetail(idx){
   const x=all[idx];
   if(!x)return;
-  const photoHtml=x.photo_url?`<div><p class="text-xs text-gray-400 mb-1">Foto</p><a href="${esc(x.photo_url)}" target="_blank" class="inline-flex items-center gap-1 text-xs text-indigo-600 underline font-medium">📷 Lihat Foto</a></div>`:'';
+  const photoUrlEsc=esc(x.photo_url||'');
+  const isUnsafeCondition=x.type==='Kondisi Tidak Aman';
+  const photoHtml=x.photo_url?`
+    <div>
+      <p class="text-xs text-gray-400 mb-1">Foto</p>
+      ${isUnsafeCondition ? `
+      <a href="${photoUrlEsc}" target="_blank" class="block group">
+        <img src="${photoUrlEsc}" alt="Preview foto kondisi tidak aman" loading="lazy" class="w-full max-h-64 object-contain rounded-xl border border-gray-200 bg-slate-50 group-hover:opacity-90 transition-opacity">
+      </a>` : ''}
+      <a href="${photoUrlEsc}" target="_blank" class="inline-flex items-center gap-1 text-xs text-indigo-600 underline font-medium mt-2">📷 Lihat Foto</a>
+    </div>`:'';
   const m=document.getElementById('modal');
   m.innerHTML=`
     <div class="modal-bg fixed inset-0 flex items-center justify-center p-4" onclick="closeModal()">
